@@ -1,21 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
-from pygame import mixer
-import time
-import os
-
-current_dir = os.path.abspath(os.getcwd())
-base_path = os.path.join(current_dir, 'frames/sounds')
-
-ACCENT_SOUND = os.path.join(base_path, 'accent.mp3')
-NORMAL_SOUND = os.path.join(base_path, 'normal.mp3')
-print(os.path.isfile(ACCENT_SOUND))
+import winsound
 
 
 class MainFrame(ttk.Frame):
 
     def __init__(self, container, controller, **kwargs):
-        super().__init__(container, **kwargs)
+        super().__init__(container, **kwargs, style='Custom.TFrame')
         self.grid_rowconfigure(0, minsize=100)
         self.grid_columnconfigure(0, minsize=270)
 
@@ -34,12 +25,12 @@ class MainFrame(ttk.Frame):
         # containers
 
         # container for counts
-        self.count_container = ttk.Frame(self)
+        self.count_container = ttk.Frame(self, style='Custom.TFrame')
         self.count_container.grid(row=0, column=0, sticky='')
         self.create_ticks(event=None)
 
         # container for bpm settings
-        self.bpm_container = ttk.Frame(self)
+        self.bpm_container = ttk.Frame(self, style='Custom.TFrame')
         self.bpm_container.grid(row=1, column=0, sticky='')
         self.bpm_container.grid_columnconfigure(1, minsize=100)
         self.create_bpm_settings()
@@ -71,9 +62,13 @@ class MainFrame(ttk.Frame):
                         self.count_container,
                         width=32,
                         height=32,
+                        bg="#293846",
+                        bd=0,
+                        highlightthickness=0,
+                        relief='ridge'
                     )
                     new_tick.create_oval(1, 1, 31, 31, outline='', fill='yellow')
-                    new_tick.grid(row=i, column=j, sticky='nsew')
+                    new_tick.grid(row=i, column=j, sticky='nsew', padx=0, pady=0)
                     self.ticks.append(new_tick)
                     total += 1
                 else:
@@ -87,25 +82,36 @@ class MainFrame(ttk.Frame):
         Create all widgets in bpm setting container
         :return:
         """
+        separator = ttk.Separator(
+            self.bpm_container,
+            orient='horizontal'
+        )
+        separator.grid(row=0, column=0, columnspan=3, sticky='ew', pady=5)
+
         self.bpm_label = ttk.Label(
             self.bpm_container,
             textvariable=self.bpm,
-            anchor='center'
+            anchor='center',
+            style='BPM.TLabel'
         )
-        self.bpm_label.grid(row=0, column=1, sticky='ew')
+        self.bpm_label.grid(row=1, column=1, sticky='ew')
 
         # 11
         self.plus = ttk.Button(
             self.bpm_container,
             command=lambda: self.update_bpm(1),
+            text='+1',
+            style='Plus.TButton'
         )
-        self.plus.grid(row=0, column=2, sticky='e')
+        self.plus.grid(row=1, column=2, sticky='e')
 
         self.minus = ttk.Button(
             self.bpm_container,
-            command=lambda: self.update_bpm(-1)
+            command=lambda: self.update_bpm(-1),
+            text='-1',
+            style='Plus.TButton'
         )
-        self.minus.grid(row=0, column=0, sticky='w')
+        self.minus.grid(row=1, column=0, sticky='w')
 
         self.slider = tk.Scale(
             self.bpm_container,
@@ -113,9 +119,10 @@ class MainFrame(ttk.Frame):
             to=300,
             orient='horizontal',
             showvalue=False,
-            variable=self.bpm
+            variable=self.bpm,
+            background="#293846"
         )
-        self.slider.grid(row=1, column=0, columnspan=3, sticky='ew')
+        self.slider.grid(row=2, column=0, columnspan=3, sticky='ew')
 
     def create_tools(self):
         """
@@ -125,14 +132,16 @@ class MainFrame(ttk.Frame):
         self.start_button = ttk.Button(
             self.tools_container,
             text='Start',
-            command=self.start
+            command=self.start,
+            style='Plus.TButton'
         )
         self.start_button.grid(row=0, column=1, sticky='ew')
 
         self.stop_button = ttk.Button(
             self.tools_container,
             text='Stop',
-            command=self.stop
+            command=self.stop,
+            style='Plus.TButton'
         )
         self.stop_button.grid(row=0, column=2, sticky='ew')
 
@@ -141,7 +150,8 @@ class MainFrame(ttk.Frame):
             values=[i + 1 for i in range(16)],
             textvariable=self.counts,
             state='readonly',
-            width=8
+            width=8,
+            style='Custom.TCombobox'
         )
         self.counts_combobox.grid(row=0, column=0, sticky='w')
         self.counts_combobox.bind('<<ComboboxSelected>>', self.create_ticks)
@@ -165,7 +175,7 @@ class MainFrame(ttk.Frame):
         self.start_button.configure(state='disabled')
         self.stop_button.configure(state='enabled')
         # disable option to change count numbers while metronome is running
-        self.counts_combobox.unbind('<<ComboboxSelected>>')
+        self.counts_combobox.configure(state='disabled')
 
         # start counting
         self.play(tick=self.counts.get() -1)
@@ -181,7 +191,7 @@ class MainFrame(ttk.Frame):
         # sets all ticks colours to default
         self.reset_ticks()
         # bind combobox again
-        self.counts_combobox.bind('<<ComboboxSelected>>', self.create_ticks)
+        self.counts_combobox.configure(state='enabled')
 
     def play(self, tick):
         """
@@ -191,11 +201,11 @@ class MainFrame(ttk.Frame):
         """
         # counting loop
         if self.is_running.get():
-            start_time = time.time()
             # changing previous tick to default color:
             self.change_tick(tick)
 
-            time_to_wait = int(60 / self.bpm.get() * 1000)
+            # calculating time to wait -101 ms for playing sound and process
+            time_to_wait = int(60 / self.bpm.get() * 1000) - 101
 
             # updating tick index to current
             if tick + 1 == self.counts.get():
@@ -209,8 +219,6 @@ class MainFrame(ttk.Frame):
             self.ticks[tick].itemconfigure(1, fill='red')
 
             # after time of beat, go to next tick
-            new_time = time.time() - start_time
-            print(new_time)
             self.after(
                 time_to_wait,
                 lambda: self.play(tick)
@@ -225,7 +233,6 @@ class MainFrame(ttk.Frame):
         if tick == 0:
             self.ticks[tick].itemconfigure(1, fill='orange')
         else:
-            print(tick)
             self.ticks[tick].itemconfigure(1, fill='yellow')
 
     def reset_ticks(self):
@@ -243,7 +250,8 @@ class MainFrame(ttk.Frame):
         :param tick: index of tick
         :return:
         """
+        # first tick is accent
         if tick == 0:
-            pass
+            winsound.Beep(880, 100)
         else:
-            pass
+            winsound.Beep(440, 100)

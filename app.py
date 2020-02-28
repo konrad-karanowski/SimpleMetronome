@@ -21,14 +21,15 @@ class Application(tk.Tk):
 
         # basic configs
         self.title('Metronome')
-        self.geometry('300x200')
+        self.geometry('300x220')
         self.resizable(False, False)
+        self.configure(background="#293846")
 
         # config styles using custom function
         style_config(self)
 
         # main container for frames
-        container = ttk.Frame(self)
+        container = ttk.Frame(self, style='Custom.TFrame')
         container.grid()
 
         # all frames in app
