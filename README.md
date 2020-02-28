@@ -1,1 +1,2 @@
 # SimpleMetronome
+Simple metronome.
